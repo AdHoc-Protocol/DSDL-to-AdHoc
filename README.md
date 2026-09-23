@@ -26,66 +26,79 @@ synchronized timestamps onto `DateTime`, and DSDL services onto AdHoc's RPC shor
 
 ## Before and after
 
-DSDL has no large files — a namespace is many small ones — so this is the most recognisable type instead:
-`uavcan.node.ExecuteCommand` 1.3, 94 lines, the service every Cyphal node implements.
-[source](samples/opencyphal/uavcan/node/435.ExecuteCommand.1.3.dsdl) ·
-[result](AdHoc/opencyphal_uavcan.cs)
+`dronecan.remoteid.SecureCommand`, 29 lines, a service: a request with a constant block and a bounded array, a
+response with its own constants.
+[source](samples/dronecan/dronecan/remoteid/64.SecureCommand.uavcan) ·
+[result](AdHoc/dronecan_dronecan.cs)
 
 ```python
-# Instructs the server node to execute or commence execution of a simple predefined command.
-# All standard commands are optional; i.e., not guaranteed to be supported by all nodes.
+# DroneCAN version of MAVLink2 SECURE_COMMAND. Please see MAVLink2 spec for more details
 
-uint16 command
-# Standard pre-defined commands are at the top of the range (defined below).
+uint32 sequence
 
-uint16 COMMAND_RESTART = 65535
-# Reboot the node.
+uint32 SECURE_COMMAND_GET_SESSION_KEY = 0
+uint32 SECURE_COMMAND_GET_REMOTEID_SESSION_KEY = 1
+uint32 SECURE_COMMAND_REMOVE_PUBLIC_KEYS = 2
+uint32 SECURE_COMMAND_GET_PUBLIC_KEYS = 3
+uint32 SECURE_COMMAND_SET_PUBLIC_KEYS = 4
+uint32 SECURE_COMMAND_GET_REMOTEID_CONFIG = 5
+uint32 SECURE_COMMAND_SET_REMOTEID_CONFIG = 6
+uint32 operation
 
-uint16 COMMAND_POWER_OFF = 65534
-# Shut down the node; further access will not be possible until the power is turned back on.
-# ... four more COMMAND_* constants ...
+uint8 sig_length
+uint8[<=220] data
 
-uint8[<=uavcan.file.Path.2.0.MAX_LENGTH] parameter
-@extent 300 * 8
 ---
-uint8 STATUS_SUCCESS        = 0     # Started or executed successfully
-uint8 STATUS_FAILURE        = 1     # Could not start or the desired outcome could not be reached
-# ... five more STATUS_* constants ...
-uint8 status
-uint8[<=46] output
-@extent 48 * 8
+
+uint32 sequence
+uint32 operation
+
+uint8 RESULT_ACCEPTED = 0
+uint8 RESULT_TEMPORARILY_REJECTED = 1
+uint8 RESULT_DENIED = 2
+uint8 RESULT_UNSUPPORTED = 3
+uint8 RESULT_FAILED = 4
+uint8 result
+
+uint8[<=220] data
 ```
 
 ```csharp
-[Version(1, 3), Extent(300)]
-public class ExecuteCommand_1_3_Request {
-    public const uint fixed_port_id = 435;
-    /**
-    Reboot the node. Note that some standard commands may or may not require a restart in order to take effect;
-    e.g., factory reset.
-    */
-    public const ushort COMMAND_RESTART = 65535;
-    // ... five more COMMAND_* constants, each with its DSDL comment as a doc block ...
-    ushort command;
-    [D(255)] byte[,,] parameter;
+public class SecureCommand_Request {
+    public const uint fixed_port_id = 64;
+    public const uint SECURE_COMMAND_GET_SESSION_KEY = 0;
+    public const uint SECURE_COMMAND_GET_REMOTEID_SESSION_KEY = 1;
+    public const uint SECURE_COMMAND_REMOVE_PUBLIC_KEYS = 2;
+    public const uint SECURE_COMMAND_GET_PUBLIC_KEYS = 3;
+    public const uint SECURE_COMMAND_SET_PUBLIC_KEYS = 4;
+    public const uint SECURE_COMMAND_GET_REMOTEID_CONFIG = 5;
+    public const uint SECURE_COMMAND_SET_REMOTEID_CONFIG = 6;
+    uint sequence; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
+    uint operation;
+    byte sig_length;
+    [D(220)] byte[,,] data;
 }
 
-[Version(1, 3), Extent(48)]
-public class ExecuteCommand_1_3_Response {
-    public const uint fixed_port_id = 435;
-    public const byte STATUS_SUCCESS = 0;
-    // ... six more STATUS_* constants ...
-    byte status;
-    [D(46)] byte[,,] output;
+public class SecureCommand_Response {
+    public const uint fixed_port_id = 64;
+    public const byte RESULT_ACCEPTED = 0;
+    public const byte RESULT_TEMPORARILY_REJECTED = 1;
+    public const byte RESULT_DENIED = 2;
+    public const byte RESULT_UNSUPPORTED = 3;
+    public const byte RESULT_FAILED = 4;
+    uint sequence; // physics: …
+    uint operation;
+    byte result;
+    [D(220)] byte[,,] data;
 }
 
 // ... in the connection: the `---` separator became a call ...
-(L____________, node.ExecuteCommand_1_3_Response) node_ExecuteCommand_1_3(node.ExecuteCommand_1_3_Request req);
+(L____________, remoteid.SecureCommand_Response) remoteid_SecureCommand(remoteid.SecureCommand_Request req);
 ```
 
-The `---` separator becomes AdHoc's RPC shorthand, `uint8[<=N]` becomes `[D(N)] byte[,,]`, the cross-type
-constant reference `uavcan.file.Path.2.0.MAX_LENGTH` is evaluated to 255, and the fixed port id becomes a
-constant instead of a pack id.
+The `---` separator becomes AdHoc's RPC shorthand, `uint8[<=220]` becomes `[D(220)] byte[,,]`, the DSDL
+constants survive as `const`, the fixed port id becomes a constant instead of a pack id, and `sequence` carries
+the varint note the converter could not decide for you.
 
 ## Commands
 
