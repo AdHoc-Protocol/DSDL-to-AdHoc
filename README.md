@@ -24,6 +24,69 @@ synchronized timestamps onto `DateTime`, and DSDL services onto AdHoc's RPC shor
 | Cyphal home page | https://opencyphal.org/ |
 | DroneCAN home page | https://dronecan.github.io/ |
 
+## Before and after
+
+DSDL has no large files — a namespace is many small ones — so this is the most recognisable type instead:
+`uavcan.node.ExecuteCommand` 1.3, 94 lines, the service every Cyphal node implements.
+[source](samples/opencyphal/uavcan/node/435.ExecuteCommand.1.3.dsdl) ·
+[result](AdHoc/opencyphal_uavcan.cs)
+
+```python
+# Instructs the server node to execute or commence execution of a simple predefined command.
+# All standard commands are optional; i.e., not guaranteed to be supported by all nodes.
+
+uint16 command
+# Standard pre-defined commands are at the top of the range (defined below).
+
+uint16 COMMAND_RESTART = 65535
+# Reboot the node.
+
+uint16 COMMAND_POWER_OFF = 65534
+# Shut down the node; further access will not be possible until the power is turned back on.
+# ... four more COMMAND_* constants ...
+
+uint8[<=uavcan.file.Path.2.0.MAX_LENGTH] parameter
+@extent 300 * 8
+---
+uint8 STATUS_SUCCESS        = 0     # Started or executed successfully
+uint8 STATUS_FAILURE        = 1     # Could not start or the desired outcome could not be reached
+# ... five more STATUS_* constants ...
+uint8 status
+uint8[<=46] output
+@extent 48 * 8
+```
+
+```csharp
+[Version(1, 3), Extent(300)]
+public class ExecuteCommand_1_3_Request {
+    public const uint fixed_port_id = 435;
+    /**
+    Reboot the node. Note that some standard commands may or may not require a restart in order to take effect;
+    e.g., factory reset.
+    */
+    public const ushort COMMAND_RESTART = 65535;
+    // ... five more COMMAND_* constants, each with its DSDL comment as a doc block ...
+    ushort command;
+    [D(255)] byte[,,] parameter;
+}
+
+[Version(1, 3), Extent(48)]
+public class ExecuteCommand_1_3_Response {
+    public const uint fixed_port_id = 435;
+    public const byte STATUS_SUCCESS = 0;
+    // ... six more STATUS_* constants ...
+    byte status;
+    [D(46)] byte[,,] output;
+}
+
+// ... in the connection: the `---` separator became a call ...
+(L____________, node.ExecuteCommand_1_3_Response) node_ExecuteCommand_1_3(node.ExecuteCommand_1_3_Request req);
+```
+
+The `---` separator becomes AdHoc's RPC shorthand, `uint8[<=N]` becomes `[D(N)] byte[,,]`, the cross-type
+constant reference `uavcan.file.Path.2.0.MAX_LENGTH` is evaluated to 255, and the fixed port id becomes a
+constant instead of a pack id.
+
 ## Commands
 
 ```bash
@@ -87,10 +150,26 @@ transport, so it is preserved as `public const uint fixed_port_id` inside the pa
 files — where a migration can audit it and generated code can read it. Every generated file contains zero
 `id = '` entries.
 
-**No varint attributes are emitted.** `[A]`, `[V]` and `[X]` tell AdHoc where a number's values *cluster*, and
-DSDL never says that — it states an exact bit width instead, which is a hard uniform range. That fact is carried
-by `[MinMax]`, which bit-packs the field to exactly the width DSDL used. Adding a varint attribute here would be
-a guess, and on a uniformly distributed field it makes the wire larger.
+**Varint: `[MinMax]` where the values are bounded, a comment where they are not.** How DSDL stores a field
+decides nothing — AdHoc lays out its own frame. What matters is what DSDL says about the *values*. A `uintN`
+declares a hard range, `0 … 2ᴺ-1`, and that is a claim about the values: they are uniform inside it and cannot
+leave it. `[MinMax]` is the right tool for exactly that claim — it bit-packs the field to the minimal span, and
+varint on a span that is already minimal would only add a continuation bit per byte.
+
+The arithmetic decides the rest. Varint wins only while the typical distance from the base stays under about two
+million, and past 268 435 455 it always loses. So a field with no hard range needs a judgement about where its
+values actually sit, and DSDL does not state that. Where the field name, its `#` comment or its unit gives a
+usable hint, the converter writes it on the field rather than guessing an attribute:
+
+```csharp
+uint uptime; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
+```
+
+Nineteen such notes appear across the eight files: monotonic counters and uptimes, where varint would lose, and
+two-sided or ceiling-hugging fields, which are `[X]` / `[V]` candidates once someone who knows the data supplies
+the real amplitude or bound. No varint attribute is ever invented — that decision belongs to the person refining
+the file, and this only puts the question in front of them. Float fields take no varint at all; a `float32`
+error term becomes an `[X]` candidate only once it is scaled to an integer.
 
 Each file declares `_DefaultMaxLengthOf = 65_535` for arrays, maps, sets and strings. DSDL states every capacity
 explicitly, so the per-field `[D(N)]` always wins; this only raises the floor above AdHoc's 255 default for a

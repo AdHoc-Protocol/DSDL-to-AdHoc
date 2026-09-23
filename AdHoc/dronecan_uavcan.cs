@@ -631,7 +631,7 @@ namespace org.dsdl {
                     /**
                     Resets when the motor restarts
                     */
-                    uint error_count;
+                    uint error_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     /**
                     Volt
                     */
@@ -2012,7 +2012,7 @@ namespace org.dsdl {
                 Uptime counter should never overflow. Other nodes may detect that a remote node has restarted when this value
                 goes backwards.
                 */
-                uint uptime_sec;
+                uint uptime_sec; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                 [MinMax(0, 3)] byte health;
                 [MinMax(0, 7)] byte mode;
                 /**

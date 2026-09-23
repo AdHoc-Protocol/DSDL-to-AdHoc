@@ -193,7 +193,7 @@ namespace org.dsdl {
                 */
                 public class GetMaintenanceInformation_Response {
                     public const uint fixed_port_id = 241;
-                    uint total_rotation_time_min;
+                    uint total_rotation_time_min; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     [MinMax(0, 16777215)] uint time_since_maintainence_min;
                 }
 
@@ -473,7 +473,7 @@ namespace org.dsdl {
                     /**
                     data sequence
                     */
-                    uint data_sequence;
+                    uint data_sequence; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     [D(255)] byte[,,] data;
                 }
 
@@ -486,7 +486,7 @@ namespace org.dsdl {
                     /**
                     data sequence
                     */
-                    uint data_sequence;
+                    uint data_sequence; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     [D(255)] byte[,,] data;
                 }
 
@@ -532,7 +532,7 @@ namespace org.dsdl {
                     ushort esc_startup_times;
                     uint esc_startup_duration;
                     uint esc_product_date;
-                    uint esc_error_count;
+                    uint esc_error_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     byte esc_signal_priority;
                     ushort esc_led_mode;
                     byte esc_can_rate;

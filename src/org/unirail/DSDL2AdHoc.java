@@ -1000,6 +1000,7 @@ public class DSDL2AdHoc {
 			String type;
 			boolean nullable = sec.union; // @union: exactly one member present → every member optional
 			String extraDoc = "";
+			String physics = null; // trailing `// physics:` note naming a varint candidate, or why varint would lose
 			if (f.castMode != null && f.castMode.equals("truncated")) attrs.add("CastMode(\"truncated\")");
 
 			Matcher m = INT.matcher(f.typeText);
@@ -1012,11 +1013,14 @@ public class DSDL2AdHoc {
 				int bits = Integer.parseInt(m.group(2));
 				type = csInt(!signed, bits);
 				if (bits != 8 && bits != 16 && bits != 32 && bits != 64) {
+					// A DSDL uintN/intN is a hard range - a claim about the values, not about storage. `[MinMax]`
+					// bit-packs it to exactly that span, which is already minimal; varint would only add
+					// continuation bits.
 					if (signed) {
 						BigInteger half = BigInteger.ONE.shiftLeft(bits - 1);
 						attrs.add("MinMax(" + half.negate() + ", " + half.subtract(BigInteger.ONE) + ")");
 					} else attrs.add("MinMax(0, " + BigInteger.ONE.shiftLeft(bits).subtract(BigInteger.ONE) + ")");
-				}
+				} else if (8 < bits) physics = physicsHint(f, signed); // no hard range: the distribution is open
 			} else {
 				TypeDef r = reg.resolve(t, f.typeText);
 				if (r == null) {
@@ -1070,7 +1074,37 @@ public class DSDL2AdHoc {
 			doc(sb, indent, f.doc + extraDoc);
 			sb.append(indent);
 			if (!attrs.isEmpty()) sb.append('[').append(String.join(", ", attrs)).append("] ");
-			sb.append(type).append(' ').append(name).append(";\n");
+			sb.append(type).append(' ').append(name).append(';');
+			if (physics != null && f.arrayKind == null) sb.append(" // ").append(physics);
+			sb.append('\n');
+		}
+
+		// A DSDL comment or field name sometimes states the physics of a value even though the grammar cannot.
+		// These are hints for the reader, never attributes: the converter has no measurements and must not guess.
+		// Matched against the field NAME only: a long DSDL comment mentions too many unrelated words to be a
+		// reliable signal on its own.
+		static final Pattern MONOTONIC = Pattern.compile("(^|_)(uptime|counter|count|sequence|seq|timestamp|ticks|total)($|_)");
+		static final Pattern CENTRED = Pattern.compile("(^|_)(delta|error|offset|correction|drift|deviation|residual|bias)($|_)");
+		static final Pattern CEILING = Pattern.compile("(^|_)(remaining|headroom|budget|ttl)($|_)");
+		// Only phrases that state the physics outright are trusted from the comment text.
+		static final Pattern MONOTONIC_DOC = Pattern.compile("never overflow|monotonic|ever[- ]increasing|since (?:boot|power-?on|start-?up)");
+
+		/**
+		 * A trailing note naming the varint decision this field deserves, for an integer wider than one byte whose
+		 * DSDL width gives no hard range. Nothing is emitted as an attribute: varint is a decision taken after
+		 * understanding the data, which a converter cannot do - but it must not drop the question silently.
+		 * Varint wins only while the typical distance from the base stays under about two million, and always loses
+		 * past 268 435 455.
+		 */
+		static String physicsHint(Field f, boolean signed) {
+			String n = f.name.toLowerCase(Locale.ROOT), d = f.doc.toLowerCase(Locale.ROOT);
+			if (MONOTONIC.matcher(n).find() || MONOTONIC_DOC.matcher(d).find())
+				return "physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width";
+			if (signed && CENTRED.matcher(n).find())
+				return "physics: two-sided, centred on zero → consider [X(amplitude)] once the real swing is known";
+			if (!signed && CEILING.matcher(n).find())
+				return "physics: hugs its ceiling → consider [V(max)] once the real bound is known";
+			return null;
 		}
 
 		static final Pattern INT = Pattern.compile("^(u?)int(\\d+)$");

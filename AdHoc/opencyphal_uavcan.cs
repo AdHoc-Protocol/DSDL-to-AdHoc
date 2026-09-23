@@ -2287,7 +2287,7 @@ namespace org.dsdl {
                 years, upon which time it should stay at 0xFFFFFFFF until the node is restarted. Other nodes may detect that a
                 remote node has restarted when this value leaps backwards.
                 */
-                uint uptime;
+                uint uptime; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                 /**
                 The abstract health status of this node.
                 */

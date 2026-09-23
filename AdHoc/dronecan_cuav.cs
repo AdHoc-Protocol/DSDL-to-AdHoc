@@ -154,11 +154,11 @@ namespace org.dsdl {
                     /**
                     number of discharge cycles the battery has experienced
                     */
-                    ushort cycle_count;
+                    ushort cycle_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     /**
                     Number of battery overdischarge
                     */
-                    ushort over_discharge_count;
+                    ushort over_discharge_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     /**
                     The amount of charge passing through the sense resistor
                     */

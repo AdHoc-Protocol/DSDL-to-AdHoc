@@ -530,7 +530,7 @@ namespace org.dsdl {
                 public const uint SECURE_COMMAND_SET_PUBLIC_KEYS = 4;
                 public const uint SECURE_COMMAND_GET_REMOTEID_CONFIG = 5;
                 public const uint SECURE_COMMAND_SET_REMOTEID_CONFIG = 6;
-                uint sequence;
+                uint sequence; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                 uint operation;
                 byte sig_length;
                 [D(220)] byte[,,] data;
@@ -547,7 +547,7 @@ namespace org.dsdl {
                 public const byte RESULT_DENIED = 2;
                 public const byte RESULT_UNSUPPORTED = 3;
                 public const byte RESULT_FAILED = 4;
-                uint sequence;
+                uint sequence; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                 uint operation;
                 byte result;
                 [D(220)] byte[,,] data;
@@ -647,7 +647,7 @@ namespace org.dsdl {
                 /**
                 default 1
                 */
-                ushort area_count;
+                ushort area_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                 /**
                 meters
                 */
@@ -669,7 +669,7 @@ namespace org.dsdl {
                 /**
                 Unix seconds since 00:00:00 01/01/2019
                 */
-                uint timestamp;
+                uint timestamp; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
             }
         }
 

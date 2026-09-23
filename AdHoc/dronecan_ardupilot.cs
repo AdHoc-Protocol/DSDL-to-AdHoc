@@ -147,11 +147,11 @@ namespace org.dsdl {
                     run, and then recharged fully that is half of a cycle. If the same thing occurs again then the charge cycle
                     count would be incremented once, not twice.
                     */
-                    ushort cycle_count;
+                    ushort cycle_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     /**
                     Number of times the battery was discharged over the rated capacity
                     */
-                    ushort over_discharge_count;
+                    ushort over_discharge_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     /**
                     Max instantaneous current draw since last message
                     [Ampere]
@@ -236,7 +236,7 @@ namespace org.dsdl {
                     : Lifetime count of the number of charge/discharge cycles (https://en.wikipedia.org/wiki/Charge_cycle).
                     UINT16_MAX: field not provided.
                     */
-                    ushort cycle_count;
+                    ushort cycle_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                     /**
                     [%]  : State of Health (SOH) estimate, in percent (0 - 100). UINT8_MAX: field not provided.
                     */

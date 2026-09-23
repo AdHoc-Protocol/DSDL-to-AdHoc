@@ -1243,7 +1243,7 @@ namespace org.dsdl {
                             Incremented once per occurrence. Reset to zero when ENGAGED. The exact definition of what constitutes an error
                             is implementation-dependent.
                             */
-                            uint error_count;
+                            uint error_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                             udral.service.actuator.common.FaultFlags_0_1 fault_flags;
                         }
 
@@ -1468,7 +1468,7 @@ namespace org.dsdl {
                         The number of charge-discharge cycles. Zero if the battery is new. May increase at runtime. What constitutes a
                         charge-discharge cycle is implementation-defined.
                         */
-                        ushort cycle_count;
+                        ushort cycle_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                         /**
                         The number of cells connected in series. This value should match the array of cell voltages reported via
                         Status.
@@ -1748,7 +1748,7 @@ namespace org.dsdl {
                         Incremented once per occurrence. Reset to zero when the sensor is ENGAGED. The exact definition of what
                         constitutes an error is implementation-dependent.
                         */
-                        uint error_count;
+                        uint error_count; // physics: monotonic and large (counter/uptime/sequence) → varint LOSES past 268 435 455; keep fixed width
                         /**
                         The temperature of the sensing element. If there are multiple sensing elements or multiple temperature probes
                         per sensor, the reduction is implementation-defined. In a later revision this field may be moved into a
