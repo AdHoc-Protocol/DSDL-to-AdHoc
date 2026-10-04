@@ -1,0 +1,4 @@
+# Where every sample comes from: <path in samples/> <page of the original>; a path ending with / covers every
+# file under it. Written by fetch-samples.sh; the converter links these pages in the headers of the descriptions.
+opencyphal/  https://github.com/OpenCyphal/public_regulated_data_types/tree/master/
+dronecan/    https://github.com/dronecan/DSDL/tree/master/
